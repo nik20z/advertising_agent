@@ -64,21 +64,22 @@ async def view_spam_tables(callback: CallbackQuery) -> None:
             reply_markup=Inline.view_spam_tables(spam_table_list)
         )
     else:
-        await callback.answer("Таблицы отсутствуют")
+        await callback.answer(AnswerCallback.view_spam_tables_empty())
 
 
 @admin_router.callback_query(SelectSpamTableCallback.filter(F.spam_table_id))
 async def select_spam_table(callback: CallbackQuery, callback_data: SelectSpamTableCallback) -> None:
     """ Выбрать таблицу для рассылки из списка """
+    user_id = callback.message.from_user.id
     spam_table_id = callback_data.spam_table_id
     spam_table = Select.spam_table(spam_table_id=spam_table_id).fetchone()
 
     if spam_table is not None:
         spam_table_name = spam_table['spam_table_name']
-        Update.spam_config_table(callback.message.from_user.id, spam_table_id)
-        await callback.answer(f"Вы выбрали таблицу: «{spam_table_name}» ({spam_table_id})")
+        Update.spam_config_table(user_id, spam_table_id)
+        await callback.answer(AnswerCallback.select_spam_table_successful(spam_table_id, spam_table_name))
     else:
-        await callback.answer(f"Такой таблицы не существует")
+        await callback.answer(AnswerCallback.select_spam_table_empty())
 
     await personal_area_callback(callback)
 
@@ -86,7 +87,8 @@ async def select_spam_table(callback: CallbackQuery, callback_data: SelectSpamTa
 @admin_router.message(Command("start"))
 async def start_spam(message: Message) -> None:
     """ Произвести рассылку """
-    spam_table_id = Select.spam_config_by_admin_id(message.from_user.id).fetchone()['spam_table_id']
+    user_id = message.from_user.id
+    spam_table_id = Select.spam_config_by_admin_id(user_id).fetchone()['spam_table_id']
 
     if spam_table_id is not None:
         spam_table = Select.spam_table(spam_table_id=spam_table_id).fetchone()
@@ -99,7 +101,7 @@ async def start_spam(message: Message) -> None:
         await message.answer(spam_message.text)
         await Spammer(bot_tg).start(user_ids, spam_message)
     else:
-        await message.answer("Вы не задали таблицу для рассылки!")
+        await message.answer(AnswerText.start_spam_table_exist())
 
 
 @admin_router.message(Command("test"))

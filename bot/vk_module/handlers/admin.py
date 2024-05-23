@@ -1,5 +1,5 @@
 from typing import Optional
-from vkbottle import GroupEventType, CtxStorage, ABCRule
+from vkbottle import GroupEventType, CtxStorage
 from vkbottle.bot import rules, BotLabeler, Message, MessageEvent
 from vkbottle.dispatch.rules.base import CommandRule
 
@@ -7,6 +7,7 @@ from bot.misc.env import VK
 from bot.vk_module import answers
 from bot.vk_module.config import bot_vk, api
 from bot.vk_module.database import Select, Update
+from bot.vk_module.handlers.my_rule import SelectSpamTableRule
 from bot.vk_module.keyboards import Reply, Inline
 from bot.vk_module.spamming import Spammer, SpamMessage
 
@@ -18,15 +19,10 @@ ctx_user_storage = CtxStorage()
 admin_labeler.auto_rules = [rules.FromPeerRule(list(VK.ADMIN_LIST))]
 
 
-class SelectSpamTableRule(ABCRule[MessageEvent]):
-    async def check(self, event: MessageEvent) -> bool:
-        return event.payload.get('select_spam_table') is not None
-
-
 @admin_labeler.message(CommandRule("show_keyboard"))
 async def show_keyboard(message: Message) -> None:
     """ Отобразить клавиатуру """
-    await message.answer("Вывод клавиатуры", keyboard=Reply.default())
+    await message.answer(AnswerText.show_keyboard(), keyboard=Reply.default())
 
 
 @admin_labeler.message(text="Личный кабинет")
@@ -41,7 +37,7 @@ async def personal_area_text(message: Message, event: Optional[MessageEvent] = N
         spam_table = Select.spam_table(spam_table_id=spam_table_id['spam_table_id']).fetchone()
         spam_table_name = spam_table['spam_table_name']
 
-    text = "AnswerText.personal_area()"
+    text = AnswerText.personal_area()
     keyboard = Inline.personal_area(spam_table_name)
 
     if edit_text:
@@ -57,7 +53,6 @@ async def personal_area_command(message: Message) -> None:
     await personal_area_text(message)
 
 
-# @admin_router.raw_event(OtherCallback.filter(F.action == "personal_area"))
 @admin_labeler.raw_event(GroupEventType.MESSAGE_EVENT, MessageEvent, rules.PayloadRule({"cmd": "personal_area"}))
 async def personal_area_callback(event: MessageEvent) -> None:
     """ Личный кабинет (Callback) """
@@ -70,11 +65,11 @@ async def view_spam_tables(event: MessageEvent) -> None:
     spam_table_list = Select.spam_table().fetchall()
     if len(spam_table_list) > 0:
         await event.edit_message(
-            message="AnswerText.view_spam_tables()",
+            message=AnswerText.view_spam_tables(),
             keyboard=Inline.view_spam_tables(spam_table_list)
         )
     else:
-        await event.answer(message="Таблицы отсутствуют")
+        await event.answer(AnswerCallback.view_spam_tables_empty())
 
 
 @admin_labeler.raw_event(GroupEventType.MESSAGE_EVENT, MessageEvent, SelectSpamTableRule())
@@ -87,9 +82,9 @@ async def select_spam_table(event: MessageEvent) -> None:
     if spam_table is not None:
         spam_table_name = spam_table['spam_table_name']
         Update.spam_config_table(user_id, spam_table_id)
-        await event.show_snackbar(f"Вы выбрали таблицу: «{spam_table_name}» ({spam_table_id})")
+        await event.show_snackbar(AnswerCallback.select_spam_table_successful(spam_table_id, spam_table_name))
     else:
-        await event.show_snackbar(f"Такой таблицы не существует")
+        await event.show_snackbar(AnswerCallback.select_spam_table_empty())
 
     await personal_area_callback(event)
 
@@ -111,7 +106,7 @@ async def start_spam(message: Message, text: Optional[str] = None) -> None:
         await message.answer(spam_message.text)
         await Spammer(api).start(user_ids, spam_message)
     else:
-        await message.answer("Вы не задали таблицу для рассылки!")
+        await message.answer(AnswerText.start_spam_table_exist())
 
 
 @admin_labeler.message(text="/test <text>")

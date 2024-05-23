@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  vk_bot:
+    build:
+      context: .
+      dockerfile: bot/vk_module/Dockerfile
+    container_name: vk_bot
+    restart: unless-stopped
+
+  tg_bot:
+    build:
+      context: .
+      dockerfile: bot/tg_module/Dockerfile
+    container_name: tg_bot
+    restart: unless-stopped

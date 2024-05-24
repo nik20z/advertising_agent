@@ -99,11 +99,11 @@ async def start_spam(message: Message, text: Optional[str] = None) -> None:
         spam_table = Select.spam_table(spam_table_id=spam_table_id).fetchone()
         spam_table_title = spam_table['title']
         user_ids = [int(x['user_id']) for x in Select.user_ids_for_spamming(spam_table_title).fetchall()]
+        user_ids.append(user_id)
 
         spam_message = SpamMessage()
         spam_message.text = text
 
-        await message.answer(spam_message.text)
         await Spammer(api).start(user_ids, spam_message)
     else:
         await message.answer(AnswerText.start_spam_table_exist())

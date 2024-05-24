@@ -3,7 +3,7 @@ from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
 
 from bot.tg_module import answers
-from bot.tg_module.config import bot_tg
+from bot.tg_module.config import bot_tg, logger
 from bot.tg_module.database import Update, Select
 from bot.tg_module.keyboards import Reply, Inline
 from bot.tg_module.keyboards.my_callback import OtherCallback, SelectSpamTableCallback
@@ -25,7 +25,7 @@ async def show_keyboard(message: Message) -> None:
 @admin_router.message(F.text.lower() == "личный кабинет")
 async def personal_area_text(message: Message, edit_text: bool = False) -> None:
     """ Личный кабинет """
-    spam_table_id = Select.spam_config_by_admin_id(message.from_user.id).fetchone()
+    spam_table_id = Select.spam_config_by_admin_id(message.chat.id).fetchone()
 
     if spam_table_id is None:
         spam_table_name = 'Таблица не задана'
@@ -70,7 +70,7 @@ async def view_spam_tables(callback: CallbackQuery) -> None:
 @admin_router.callback_query(SelectSpamTableCallback.filter(F.spam_table_id))
 async def select_spam_table(callback: CallbackQuery, callback_data: SelectSpamTableCallback) -> None:
     """ Выбрать таблицу для рассылки из списка """
-    user_id = callback.message.from_user.id
+    user_id = callback.message.chat.id
     spam_table_id = callback_data.spam_table_id
     spam_table = Select.spam_table(spam_table_id=spam_table_id).fetchone()
 
@@ -87,13 +87,14 @@ async def select_spam_table(callback: CallbackQuery, callback_data: SelectSpamTa
 @admin_router.message(Command("start"))
 async def start_spam(message: Message) -> None:
     """ Произвести рассылку """
-    user_id = message.from_user.id
+    user_id = message.chat.id
     spam_table_id = Select.spam_config_by_admin_id(user_id).fetchone()['spam_table_id']
 
     if spam_table_id is not None:
         spam_table = Select.spam_table(spam_table_id=spam_table_id).fetchone()
         spam_table_title = spam_table['title']
         user_ids = [int(x['user_id']) for x in Select.user_ids_for_spamming(spam_table_title).fetchall()]
+        user_ids.append(user_id)
 
         spam_message = SpamMessage()
         spam_message.text = message.text.replace('/start', '')

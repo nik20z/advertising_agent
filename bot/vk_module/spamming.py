@@ -1,7 +1,8 @@
 from _datetime import datetime
 from typing import List
+from vkbottle import API, VKAPIError
 
-from vkbottle import API
+from bot.vk_module.config import logger
 
 
 class SpamMessage:
@@ -18,8 +19,12 @@ class Spammer:
 
     async def start(self, user_ids: List[int], spam_message: SpamMessage) -> None:
         for user_id in user_ids:
-            await self.api.messages.send(
-                user_id=user_id,
-                message=spam_message.text,
-                random_id=int(datetime.now().timestamp())
-            )
+            try:
+                await self.api.messages.send(
+                    user_id=user_id,
+                    message=spam_message.text,
+                    random_id=int(datetime.now().timestamp())
+                )
+            except VKAPIError as e:
+                logger.info(f"{e.code}: {e.description}")
+

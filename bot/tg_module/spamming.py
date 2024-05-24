@@ -1,6 +1,7 @@
 from typing import List
-
 from aiogram import Bot
+
+from bot.tg_module.config import logger
 
 
 class SpamMessage:
@@ -17,4 +18,7 @@ class Spammer:
 
     async def start(self, user_ids: List[int], spam_message: SpamMessage) -> None:
         for user_id in user_ids:
-            await self.bot.send_message(user_id, text=spam_message.text)
+            try:
+                await self.bot.send_message(user_id, text=spam_message.text)
+            except Exception as e:
+                logger.info(f"{user_id=}: {e}")

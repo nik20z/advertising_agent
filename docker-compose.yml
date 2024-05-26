@@ -7,6 +7,8 @@ services:
       dockerfile: bot/vk_module/Dockerfile
     container_name: vk_bot
     restart: unless-stopped
+    volumes:
+      - ./database/vkontakte:/app/bot/vk_module/database/data
 
   tg_bot:
     build:
@@ -14,3 +16,5 @@ services:
       dockerfile: bot/tg_module/Dockerfile
     container_name: tg_bot
     restart: unless-stopped
+    volumes:
+      - ./database/telegram:/app/bot/tg_module/database/data

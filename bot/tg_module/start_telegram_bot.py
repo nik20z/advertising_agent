@@ -24,7 +24,7 @@ async def start_telegram_bot() -> None:
     dp.include_router(user_router)
 
     await set_default_commands(bot_tg)
-    # await bot_tg.delete_webhook(drop_pending_updates=True)
+    await bot_tg.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot_tg)
 
 
